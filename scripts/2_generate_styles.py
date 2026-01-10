@@ -17,6 +17,8 @@ def generate_style_templates():
         "Generate 10 diverse and creative image generation prompt templates for creating pet memes. "
         "Each template must include the placeholder '{pet_description}'. "
         "The styles should range from realistic/human-like to various art styles. "
+        "CRITICAL: The prompt templates must describe the VISUALS ONLY. Do NOT include any instructions for text, captions, or words to be written in the image. "
+        "The images should be clean, text-free visuals that can be used as a background for a meme later."
         "Examples: "
         "- 'A hyper-realistic photo of {pet_description} wearing a business suit and working at a laptop in a modern office.' "
         "- 'A cute 8-bit pixel art character of {pet_description} holding a sword.' "
@@ -44,7 +46,7 @@ def generate_style_templates():
         
         styles = json.loads(clean_text)
         
-        with open("meme_styles_v2.json", "w") as f:
+        with open("meme_styles.json", "w") as f:
             json.dump(styles, f, indent=2)
             
         print("Successfully generated 10 meme style templates:")

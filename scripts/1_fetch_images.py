@@ -2,7 +2,7 @@ import requests
 import os
 
 # Directory to save images
-SAVE_DIR = "input_images_v2"
+SAVE_DIR = "input_images"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # List of high-quality "Normal" pet images (Base for transformation)
