@@ -12,7 +12,7 @@ IMAGEN_URL = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-4.
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={API_KEY}"
 
 INPUT_DIR = "input_images"
-OUTPUT_DIR = "mass_produced_memes"
+OUTPUT_DIR = "output_memes"
 STYLES_FILE = "meme_styles.json"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
