@@ -2,6 +2,7 @@ import requests
 import os
 import json
 import base64
+import time
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
@@ -66,6 +67,8 @@ def generate_image_from_prompt(prompt, output_filename):
             with open(output_path, "wb") as f:
                 f.write(base64.b64decode(b64_img))
             print(f"Image saved: {output_filename}")
+            print("Sleeping for 30s to respect rate limits...")
+            time.sleep(30)
             return output_path
     except Exception as e:
         print(f"Error generating image: {e}")
