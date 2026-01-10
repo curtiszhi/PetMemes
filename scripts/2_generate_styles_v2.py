@@ -8,16 +8,19 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={API_KEY}"
 
-def generate_prompts():
+def generate_style_templates():
     if not API_KEY:
         print("Error: GEMINI_API_KEY not found in .env")
         return
 
-    # V2 Prompt: Specific request for human-like personas
     prompt_text = (
-        "Generate 10 distinct, funny meme personas specifically for pets acting like humans. "
-        "The personas should describe a pet doing a human activity or wearing human clothes. "
-        "Examples: 'The Coffee Shop Screenwriter Dog', 'The Corporate Cat in a Tie', 'The Gym Rat Hamster'. "
+        "Generate 10 diverse and creative image generation prompt templates for creating pet memes. "
+        "Each template must include the placeholder '{pet_description}'. "
+        "The styles should range from realistic/human-like to various art styles. "
+        "Examples: "
+        "- 'A hyper-realistic photo of {pet_description} wearing a business suit and working at a laptop in a modern office.' "
+        "- 'A cute 8-bit pixel art character of {pet_description} holding a sword.' "
+        "- 'A dramatic oil painting of {pet_description} dressed as a Napoleonic general.' "
         "Return the output as a JSON array of strings. Do not include markdown formatting."
     )
 
@@ -39,14 +42,14 @@ def generate_prompts():
         # Clean up potential markdown code blocks
         clean_text = text_response.replace("```json", "").replace("```", "").strip()
         
-        prompts = json.loads(clean_text)
+        styles = json.loads(clean_text)
         
-        with open("prompts_v2.json", "w") as f:
-            json.dump(prompts, f, indent=2)
+        with open("meme_styles_v2.json", "w") as f:
+            json.dump(styles, f, indent=2)
             
-        print("Successfully generated 10 human-like meme prompts (V2):")
-        for p in prompts:
-            print(f"- {p}")
+        print("Successfully generated 10 meme style templates:")
+        for s in styles:
+            print(f"- {s}")
             
     except Exception as e:
         print(f"Error calling Gemini API: {e}")
@@ -54,4 +57,4 @@ def generate_prompts():
             print(f"Response: {response.text}")
 
 if __name__ == "__main__":
-    generate_prompts()
+    generate_style_templates()

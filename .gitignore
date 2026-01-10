@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# System
+.DS_Store
+
+# Project Assets (Input/Output)
+input_images/
+output_memes/
+input_images_v2/
+generated_images_v2/
+output_memes_v2/
+
+# Generated Data
+prompts.json
+prompts_v2.json
+transform_prompts_v2.json
