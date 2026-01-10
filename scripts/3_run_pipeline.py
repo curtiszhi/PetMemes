@@ -73,7 +73,7 @@ def generate_image_from_prompt(prompt, output_filename):
 
 def generate_caption(image_path):
     base64_image = encode_image(image_path)
-    prompt_text = "Write a punchy, funny meme caption for this image. UPPERCASE text only. No quotes. The caption should be related to the specific visual style/action in the image."
+    prompt_text = "Write a VERY SHORT, punchy, funny meme caption for this image. Max 8 words. UPPERCASE text only. No quotes. The caption should be related to the specific visual style/action in the image."
     
     payload = {
         "contents": [{
