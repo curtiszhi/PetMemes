@@ -8,13 +8,30 @@ from PIL import Image, ImageDraw, ImageFont
 
 load_dotenv()
 
+# ... imports remain ...
+import requests
+import os
+import json
+import base64
+import time
+from dotenv import load_dotenv
+from PIL import Image, ImageDraw, ImageFont
+
+load_dotenv()
+
 API_KEY = os.getenv("GEMINI_API_KEY")
 IMAGEN_URL = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key={API_KEY}"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={API_KEY}"
 
 INPUT_DIR = "input_images"
 OUTPUT_DIR = "output_memes"
-STYLES_FILE = "meme_styles.json"
+# STYLES_FILE not needed anymore
+# STYLES_FILE = "meme_styles.json" 
+
+ACTIVITIES = [
+    ("typing", "typing frantically on a mechanical keyboard in a chaotic office"),
+    ("spa", "reading a book while relaxing in a lush spa with cucumber slices on eyes and a towel on head")
+]
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -22,14 +39,23 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def get_pet_description(image_path):
+# Rewritten to generate the FULL prompt based on image + activity
+def generate_transformation_prompt(image_path, activity_description):
     base64_image = encode_image(image_path)
-    prompt_text = "Describe this pet in detail (breed, color, markings, expression) in one sentence. Do NOT mention the background, just the pet."
+    
+    # Prompt engineering for the Vision model to act as a Prompt Engineer
+    prompt_request = (
+        f"Act as an expert prompt engineer. Look at this pet in the image. "
+        f"I want to generate a new high-quality, photorealistic image of THIS SPECIFIC PET {activity_description}. "
+        f"Write a detailed image generation prompt that describes the pet's physical features (breed, exact color, patterns, eye color) "
+        f"based on the image, and places them in the scene described. "
+        f"The output should be ONLY the prompt string, nothing else."
+    )
     
     payload = {
         "contents": [{
             "parts": [
-                {"text": prompt_text},
+                {"text": prompt_request},
                 {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}
             ]
         }]
@@ -40,14 +66,11 @@ def get_pet_description(image_path):
         response.raise_for_status()
         return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
     except Exception as e:
-        print(f"Error getting description: {e}")
+        print(f"Error generating prompt: {e}")
         return None
 
 def generate_image_from_prompt(prompt, output_filename):
-    # Output path for intermediate file
     output_path = os.path.join(OUTPUT_DIR, output_filename)
-    
-    # Check if we already have it (optional, but good for retries if script crashes)
     if os.path.exists(output_path):
         return output_path
 
@@ -59,7 +82,11 @@ def generate_image_from_prompt(prompt, output_filename):
     
     try:
         response = requests.post(IMAGEN_URL, headers={"Content-Type": "application/json"}, json=payload)
-        response.raise_for_status()
+        # Handle non-200
+        if response.status_code != 200:
+             print(f"Error {response.status_code}: {response.text}")
+             return None
+             
         data = response.json()
         
         if 'predictions' in data:
@@ -76,7 +103,7 @@ def generate_image_from_prompt(prompt, output_filename):
 
 def generate_caption(image_path):
     base64_image = encode_image(image_path)
-    prompt_text = "Write a VERY SHORT, punchy, funny meme caption for this image. Max 8 words. UPPERCASE text only. No quotes. The caption should be related to the specific visual style/action in the image."
+    prompt_text = "Write a VERY SHORT, punchy, funny meme caption for this image. Max 8 words. UPPERCASE text only. No quotes."
     
     payload = {
         "contents": [{
@@ -147,22 +174,15 @@ def render_meme(image_path, caption, output_filename):
         
         text = "\n".join(lines)
         
-        # Calculate Height to position at bottom
-        # A simple approximation for line height is safest across PIL versions
+        # Calculate Height
         line_height = font_size * 1.2
         text_height = len(lines) * line_height
-        
-        # Bottom margin
         bottom_margin = height * 0.05
-        
-        # Top Y coordinate for the text block
         y_top = height - text_height - bottom_margin
-        
-        if y_top < 0: y_top = 0 # Safety clamp
+        if y_top < 0: y_top = 0
         
         stroke_width = max(1, int(font_size/12))
         
-        # Draw with anchor="ma" (middle-ascender/top) at calculated top Y
         draw.multiline_text(
             (width/2, y_top),
             text, 
@@ -183,12 +203,9 @@ def render_meme(image_path, caption, output_filename):
         return None
 
 def main():
-    if not os.path.exists(INPUT_DIR) or not os.path.exists(STYLES_FILE):
-        print("Missing inputs.")
+    if not os.path.exists(INPUT_DIR):
+        print("Missing input directory.")
         return
-
-    with open(STYLES_FILE, "r") as f:
-        styles = json.load(f)
     
     input_files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
     input_files.sort()
@@ -197,40 +214,41 @@ def main():
         print("No input images found.")
         return
 
-    print("Running Mass Production Pipeline...")
+    print("Running New 'Vision-Imagination' Pipeline (Typing & Spa)...")
 
     for filename in input_files:
         print(f"\n--- Processing {filename} ---")
-        desc = get_pet_description(os.path.join(INPUT_DIR, filename))
-        if not desc: 
-            print("Failed to get description. Skipping.")
-            continue
-        print(f"Description: {desc}")
-        
         pet_name = filename.split('_')[0]
         
-        # Limit to 3 styles per image
-        for i, style in enumerate(styles[:3]): 
-            final_prompt = style.format(pet_description=desc)
+        # Loop over specific activities
+        for activity_name, activity_desc in ACTIVITIES:
+            print(f"Activity: {activity_name}")
             
-            # Temporary file name
-            temp_raw_filename = f"temp_{pet_name}_{i}.png"
-            final_meme_filename = f"{pet_name}_meme_style_{i}.jpg"
+            # 1. Vision -> Prompt
+            print("Creating prompt from image...")
+            imagen_prompt = generate_transformation_prompt(os.path.join(INPUT_DIR, filename), activity_desc)
+            if not imagen_prompt:
+                continue
             
-            gen_path = generate_image_from_prompt(final_prompt, temp_raw_filename)
+            # 2. Prompt -> Image
+            temp_raw_filename = f"temp_{pet_name}_{activity_name}.png"
+            final_meme_filename = f"{pet_name}_{activity_name}_meme.jpg"
             
+            gen_path = generate_image_from_prompt(imagen_prompt, temp_raw_filename)
+            
+            # 3. Image -> Caption -> Meme
             if gen_path:
                 caption = generate_caption(gen_path)
                 if caption:
                     print(f"Caption: {caption}")
                     render_meme(gen_path, caption, final_meme_filename)
                 
-                # Cleanup temp file
+                # Cleanup
                 try:
                     os.remove(gen_path)
-                    print(f"Deleted temp file: {gen_path}")
-                except Exception as e:
-                    print(f"Error removing temp file: {e}")
+                    print("Deleted temp file.")
+                except:
+                    pass
 
 if __name__ == "__main__":
     main()
